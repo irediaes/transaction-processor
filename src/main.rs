@@ -1,3 +1,5 @@
+mod account;
+
 extern crate csv;
 
 use serde::{Deserialize, Serialize};
@@ -6,6 +8,8 @@ use std::error::Error;
 use std::ffi::OsString;
 use std::fs::File;
 use std::process;
+
+use crate::account::Account;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Transaction {
@@ -30,6 +34,7 @@ fn read_csv_file() -> Result<(), Box<dyn Error>> {
     for result in rdr.deserialize() {
         let record: Transaction = result?;
         println!("{:?}", record);
+        process_deposit(record);
     }
 
     Ok(())
@@ -40,4 +45,14 @@ fn read_arg() -> Result<OsString, Box<dyn Error>> {
         None => Err(From::from("expected a csv file argument")),
         Some(file_path) => Ok(file_path),
     }
+}
+
+fn process_deposit(transaction: Transaction) {
+    if transaction.r#type != "deposit" {
+        return;
+    }
+
+    let new_account = Account::new(transaction.client, transaction.amount, 0.0);
+
+    println!("{:?}", new_account)
 }
