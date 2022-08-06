@@ -27,4 +27,50 @@ impl Account {
             locked,
         }
     }
+
+    pub fn deposit(&mut self, tranx: Transaction) {
+        self.available += tranx.amount;
+        self.total += tranx.amount;
+    }
+}
+
+#[test]
+fn deposit() {
+    let mut account = Account::new(1, 20.0, 0.0);
+    let tranx = Transaction {
+        r#type: "deposit".to_string(),
+        client: 1,
+        tx: 1,
+        amount: 15.0,
+    };
+
+    assert!(
+        account.available == 20.0,
+        "wrong available funds; expect {}, got {}",
+        20.0,
+        account.available
+    );
+
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    account.deposit(tranx);
+
+    assert!(
+        account.available == 35.0,
+        "wrong available funds; expect {}, got {}",
+        35.0,
+        account.available
+    );
+
+    assert!(
+        account.total == 35.0,
+        "wrong total funds; expect {}, got {}",
+        35.0,
+        account.total
+    );
 }
