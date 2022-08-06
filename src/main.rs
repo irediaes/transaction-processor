@@ -1,10 +1,19 @@
 extern crate csv;
 
+use serde::{Deserialize, Serialize};
 use std::env;
 use std::error::Error;
 use std::ffi::OsString;
 use std::fs::File;
 use std::process;
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Transaction {
+    r#type: String,
+    client: u16,
+    tx: u32,
+    amount: f32,
+}
 
 fn main() {
     if let Err(err) = read_csv_file() {
@@ -18,8 +27,8 @@ fn read_csv_file() -> Result<(), Box<dyn Error>> {
     let file = File::open(file_path)?;
     let mut rdr = csv::Reader::from_reader(file);
 
-    for result in rdr.records() {
-        let record = result?;
+    for result in rdr.deserialize() {
+        let record: Transaction = result?;
         println!("{:?}", record);
     }
 
