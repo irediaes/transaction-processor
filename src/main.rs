@@ -1,23 +1,16 @@
 extern crate csv;
 
-mod account;
+mod acct;
+mod tx;
 
-use serde::{Deserialize, Serialize};
 use std::env;
 use std::error::Error;
 use std::ffi::OsString;
 use std::fs::File;
 use std::process;
 
-use crate::account::account::{self as acct, Account};
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Transaction {
-    r#type: String,
-    client: u16,
-    tx: u32,
-    amount: f32,
-}
+use crate::acct::account::{self, Account};
+use crate::tx::transaction::{self, Transaction};
 
 fn main() {
     if let Err(err) = read_csv_file() {
@@ -34,11 +27,12 @@ fn read_csv_file() -> Result<(), Box<dyn Error>> {
     for result in rdr.deserialize() {
         let record: Transaction = result?;
         // println!("{:?}", record);
-        acct::process_deposit(&record);
-        acct::process_withdrawal(&record)
+        account::process_deposit(&record);
+        account::process_withdrawal(&record);
+        account::process_dispute(&record);
     }
 
-    acct::print_accounts();
+    account::print();
 
     Ok(())
 }
