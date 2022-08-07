@@ -59,6 +59,10 @@ impl AccountStorage {
     pub fn account_exists(&self, id: u16) -> bool {
         self.accounts.lock().unwrap().contains_key(&id)
     }
+
+    pub fn clear_accounts(&self) {
+        self.accounts.lock().unwrap().clear();
+    }
 }
 
 /// Tests
@@ -90,6 +94,9 @@ fn test_insert_account() {
 
 #[test]
 fn test_modify_account() {
+    unsafe {
+        ACCOUNTS.lock().unwrap().clear_accounts();
+    }
     let account = Account {
         client: 1,
         available: 20.0,
