@@ -20,3 +20,20 @@ impl Transaction {
         }
     }
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Dispute {
+    pub client: u16,
+    pub tx: u32,
+    pub resolved: bool,
+}
+
+impl Dispute {
+    pub fn new(client: u16, tx: u32, resolved: bool) -> Self {
+        Self {
+            client,
+            tx,
+            resolved,
+        }
+    }
+}

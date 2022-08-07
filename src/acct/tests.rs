@@ -214,6 +214,25 @@ fn test_process_dispute() {
             tranx_deposit_2.amount,
             acct.held
         );
+
+        let dispute = TxStore::TRANSACTIONS
+            .lock()
+            .unwrap()
+            .dispute(tranx_dispute.tx, |acc| acc.unwrap().clone());
+
+        assert!(
+            dispute.tx == tranx_dispute.tx,
+            "invalid dispute tx; expected {}, got {}",
+            tranx_dispute.tx,
+            dispute.tx
+        );
+
+        assert!(
+            dispute.client == tranx_dispute.client,
+            "invalid dispute client; expected {}, got {}",
+            tranx_dispute.client,
+            dispute.client
+        );
     }
 }
 

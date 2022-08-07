@@ -84,7 +84,7 @@ fn test_insert() {
     db.insert(account.clone());
 
     let acct: Account = db.read(1, |acct| acct.unwrap().clone());
-    println!("{:?}", acct);
+    // println!("{:?}", acct);
 
     assert!(
         acct.client == account.client,

@@ -2,6 +2,7 @@ use std::io;
 extern crate csv;
 
 use crate::acct::storage;
+use crate::tx::transaction::Dispute;
 use crate::tx::{storage as TxStore, transaction::Transaction};
 use serde::Serialize;
 
@@ -168,6 +169,14 @@ pub fn process_dispute(tranx: &Transaction) {
             .lock()
             .unwrap()
             .read(tranx.tx, |trx| trx.unwrap().clone());
+
+        let dispute = Dispute::new(tranx.client, tranx.tx, false);
+
+        // Store dispute
+        TxStore::TRANSACTIONS
+            .lock()
+            .unwrap()
+            .insert_dispute(dispute);
     }
 
     let account_exists: bool;
