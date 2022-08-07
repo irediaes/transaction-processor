@@ -1,17 +1,12 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
-
 use crate::Transaction;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Account {
-    client: u16,
-    available: f32,
-    held: f32,
-    total: f32,
-    locked: bool,
+    pub client: u16,
+    pub available: f32,
+    pub held: f32,
+    pub total: f32,
+    pub locked: bool,
 }
 
 impl Account {

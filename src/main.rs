@@ -9,7 +9,7 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::process;
 
-use crate::account::Account;
+use crate::account::account::Account;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Transaction {
