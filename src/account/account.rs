@@ -39,6 +39,13 @@ impl Account {
             self.total -= tranx.amount;
         }
     }
+
+    pub fn dispute(&mut self, tranx: &Transaction) {
+        if tranx.amount < self.available {
+            self.available -= tranx.amount;
+            self.held += tranx.amount;
+        }
+    }
 }
 
 pub fn print_accounts() {
@@ -362,5 +369,70 @@ fn test_withdraw() {
         "wrong total funds; expect {}, got {}",
         15.0,
         account.total
+    );
+}
+
+#[test]
+fn test_dispute() {
+    let mut account = Account::new(1, 20.0, 0.0);
+    let mut tranx = Transaction {
+        r#type: "dispute".to_string(),
+        client: 1,
+        tx: 1,
+        amount: 15.0,
+    };
+
+    // Test initial funds
+    assert!(
+        account.available == 20.0,
+        "wrong available funds; expect {}, got {}",
+        20.0,
+        account.available
+    );
+
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    // Test disputing excess funds
+
+    tranx.amount = 50.0;
+
+    account.dispute(&tranx);
+
+    assert!(
+        account.available == 20.0,
+        "wrong available funds; expect {}, got {}",
+        20.0,
+        account.available
+    );
+
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    // Test disputing funds
+
+    tranx.amount = 15.0;
+    account.dispute(&tranx);
+
+    assert!(
+        account.available == 5.0,
+        "wrong available funds; expect {}, got {}",
+        5.0,
+        account.available
+    );
+
+    assert!(
+        account.held == 15.0,
+        "wrong held funds; expect {}, got {}",
+        15.0,
+        account.held
     );
 }
