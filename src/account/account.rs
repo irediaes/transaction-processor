@@ -32,6 +32,13 @@ impl Account {
         self.available += tranx.amount;
         self.total += tranx.amount;
     }
+
+    pub fn withdraw(&mut self, tranx: Transaction) {
+        if tranx.amount < self.available {
+            self.available -= tranx.amount;
+            self.total -= tranx.amount;
+        }
+    }
 }
 
 pub fn print_accounts() {
@@ -154,6 +161,7 @@ fn test_deposit() {
         amount: 15.0,
     };
 
+    // Test initial funds
     assert!(
         account.available == 20.0,
         "wrong available funds; expect {}, got {}",
@@ -170,6 +178,7 @@ fn test_deposit() {
 
     account.deposit(tranx);
 
+    // Test deposited funds
     assert!(
         account.available == 35.0,
         "wrong available funds; expect {}, got {}",
@@ -181,6 +190,71 @@ fn test_deposit() {
         account.total == 35.0,
         "wrong total funds; expect {}, got {}",
         35.0,
+        account.total
+    );
+}
+
+#[test]
+fn test_withdraw() {
+    let mut account = Account::new(1, 20.0, 0.0);
+    let mut tranx = Transaction {
+        r#type: "deposit".to_string(),
+        client: 1,
+        tx: 1,
+        amount: 15.0,
+    };
+
+    // Test initial funds
+    assert!(
+        account.available == 20.0,
+        "wrong available funds; expect {}, got {}",
+        20.0,
+        account.available
+    );
+
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    // Test withdrawing excess funds
+
+    tranx.amount = 50.0;
+
+    account.withdraw(tranx.clone());
+
+    assert!(
+        account.available == 20.0,
+        "wrong available funds; expect {}, got {}",
+        20.0,
+        account.available
+    );
+
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    // Test withdrawn funds
+
+    tranx.amount = 5.0;
+    account.withdraw(tranx);
+
+    assert!(
+        account.available == 15.0,
+        "wrong available funds; expect {}, got {}",
+        15.0,
+        account.available
+    );
+
+    assert!(
+        account.total == 15.0,
+        "wrong total funds; expect {}, got {}",
+        15.0,
         account.total
     );
 }
