@@ -3,7 +3,13 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use once_cell::sync::Lazy;
+
 use crate::Account;
+
+pub static mut ACCOUNTS: Lazy<Mutex<AccountStorage>> =
+    Lazy::new(|| Mutex::new(AccountStorage::new()));
+
 pub struct AccountStorage {
     accounts: Arc<Mutex<HashMap<u16, Account>>>,
 }
@@ -54,6 +60,8 @@ impl AccountStorage {
         self.accounts.lock().unwrap().contains_key(&id)
     }
 }
+
+/// Tests
 
 #[test]
 fn test_insert_account() {
