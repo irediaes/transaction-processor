@@ -34,7 +34,8 @@ fn read_csv_file() -> Result<(), Box<dyn Error>> {
     for result in rdr.deserialize() {
         let record: Transaction = result?;
         // println!("{:?}", record);
-        acct::process_deposit(record);
+        acct::process_deposit(&record);
+        acct::process_withdrawal(&record)
     }
 
     acct::print_accounts();
