@@ -21,21 +21,21 @@ impl AccountStorage {
         }
     }
 
-    pub fn read_account<F, R>(&self, id: u16, f: F) -> R
+    pub fn read<F, R>(&self, id: u16, f: F) -> R
     where
         F: FnOnce(Option<&Account>) -> R,
     {
         f(self.accounts.lock().unwrap().get(&id))
     }
 
-    pub fn read_accounts<F, R>(&self, f: F) -> R
+    pub fn reads<F, R>(&self, f: F) -> R
     where
         F: FnOnce(Iter<u16, Account>) -> R,
     {
         f(self.accounts.lock().unwrap().iter())
     }
 
-    pub fn insert_account(&self, account: Account) -> bool {
+    pub fn insert(&self, account: Account) -> bool {
         let acc = self
             .accounts
             .lock()
@@ -49,18 +49,18 @@ impl AccountStorage {
         false
     }
 
-    pub fn modify_account<F, R>(&self, id: u16, f: F) -> R
+    pub fn modify<F, R>(&self, id: u16, f: F) -> R
     where
         F: FnOnce(Option<&mut Account>) -> R,
     {
         f(self.accounts.lock().unwrap().get_mut(&id))
     }
 
-    pub fn account_exists(&self, id: u16) -> bool {
+    pub fn exists(&self, id: u16) -> bool {
         self.accounts.lock().unwrap().contains_key(&id)
     }
 
-    pub fn clear_accounts(&self) {
+    pub fn clear(&self) {
         self.accounts.lock().unwrap().clear();
     }
 }
@@ -68,7 +68,7 @@ impl AccountStorage {
 /// Tests
 
 #[test]
-fn test_insert_account() {
+fn test_insert() {
     let account = Account {
         client: 1,
         available: 20.0,
@@ -78,12 +78,12 @@ fn test_insert_account() {
     };
 
     let db = AccountStorage::new();
-    let acct_exist = db.account_exists(1);
+    let acct_exist = db.exists(1);
     assert!(!acct_exist, "account should be empty");
 
-    db.insert_account(account.clone());
+    db.insert(account.clone());
 
-    let acct: Account = db.read_account(1, |acct| acct.unwrap().clone());
+    let acct: Account = db.read(1, |acct| acct.unwrap().clone());
     println!("{:?}", acct);
 
     assert!(
@@ -93,9 +93,9 @@ fn test_insert_account() {
 }
 
 #[test]
-fn test_modify_account() {
+fn test_modify() {
     unsafe {
-        ACCOUNTS.lock().unwrap().clear_accounts();
+        ACCOUNTS.lock().unwrap().clear();
     }
     let account = Account {
         client: 1,
@@ -106,32 +106,31 @@ fn test_modify_account() {
     };
 
     let db = AccountStorage::new();
-    let acct_exist = db.account_exists(1);
-    assert!(!acct_exist, "account should be empty");
+    let exists = db.exists(1);
+    assert!(!exists, "account should be empty");
 
-    db.insert_account(account.clone());
+    db.insert(account.clone());
 
-    let acct: Account = db.read_account(1, |acct| acct.unwrap().clone());
-    println!("{:?}", acct);
+    let acct: Account = db.read(1, |acct| acct.unwrap().clone());
 
     assert!(
         acct.available == account.available,
         "created client id and fetched client id are not equal"
     );
 
-    let updated_account = db.modify_account(acct.client, |acc| {
+    let updated = db.modify(acct.client, |acc| {
         let a = acc.unwrap();
         a.available = 25.0;
 
-        db.insert_account(*a);
+        db.insert(*a);
 
         return *a;
     });
 
     assert!(
-        updated_account.available == account.available,
+        updated.available == account.available,
         "account not equal after modification; expect {}, got {}",
         account.available,
-        updated_account.available,
+        updated.available,
     );
 }

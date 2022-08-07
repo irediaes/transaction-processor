@@ -1,158 +1,6 @@
-use std::io;
-extern crate csv;
-
-use crate::account::storage;
-use crate::Transaction;
-use serde::Serialize;
-
-#[derive(Debug, Copy, Clone, PartialEq, Serialize)]
-pub struct Account {
-    pub client: u16,
-    pub available: f32,
-    pub held: f32,
-    pub total: f32,
-    pub locked: bool,
-}
-
-impl Account {
-    pub fn new(client: u16, available: f32, held: f32) -> Self {
-        let total = available + held;
-        let locked = false;
-
-        Self {
-            client,
-            available,
-            held,
-            total,
-            locked,
-        }
-    }
-
-    pub fn deposit(&mut self, tranx: &Transaction) {
-        self.available += tranx.amount;
-        self.total += tranx.amount;
-    }
-
-    pub fn withdraw(&mut self, tranx: &Transaction) {
-        if tranx.amount < self.available {
-            self.available -= tranx.amount;
-            self.total -= tranx.amount;
-        }
-    }
-
-    pub fn dispute(&mut self, tranx: &Transaction) {
-        if tranx.amount < self.available {
-            self.available -= tranx.amount;
-            self.held += tranx.amount;
-        }
-    }
-}
-
-pub fn print_accounts() {
-    let mut csv_writer = csv::Writer::from_writer(io::stdout());
-    unsafe {
-        storage::ACCOUNTS.lock().unwrap().read_accounts(|iter| {
-            for (_, acc) in iter {
-                csv_writer.serialize(acc).unwrap();
-                println!("{:?}", acc)
-            }
-        })
-    }
-}
-
-pub fn process_deposit(tranx: &Transaction) {
-    if tranx.r#type != "deposit" {
-        return;
-    }
-
-    let account_exists: bool;
-
-    unsafe {
-        account_exists = storage::ACCOUNTS
-            .lock()
-            .unwrap()
-            .account_exists(tranx.client);
-    }
-
-    if !account_exists {
-        let new_account = Account::new(tranx.client, tranx.amount, 0.0);
-        unsafe {
-            storage::ACCOUNTS
-                .lock()
-                .unwrap()
-                .insert_account(new_account);
-        }
-
-        return;
-    }
-    let u_account: Option<Account>;
-
-    unsafe {
-        u_account = storage::ACCOUNTS
-            .lock()
-            .unwrap()
-            .modify_account(tranx.client, |acct| {
-                let a = if let Some(acc) = acct {
-                    acc.deposit(tranx);
-                    Some(*acc)
-                } else {
-                    None
-                };
-                return a;
-            });
-
-        if let Some(acct) = u_account {
-            storage::ACCOUNTS.lock().unwrap().insert_account(acct);
-        }
-    }
-}
-
-pub fn process_withdrawal(tranx: &Transaction) {
-    if tranx.r#type != "withdrawal" {
-        return;
-    }
-
-    let account_exists: bool;
-
-    unsafe {
-        account_exists = storage::ACCOUNTS
-            .lock()
-            .unwrap()
-            .account_exists(tranx.client);
-    }
-
-    if !account_exists {
-        let new_account = Account::new(tranx.client, 0.0, 0.0);
-        unsafe {
-            storage::ACCOUNTS
-                .lock()
-                .unwrap()
-                .insert_account(new_account);
-        }
-
-        return;
-    }
-    let u_account: Option<Account>;
-
-    unsafe {
-        u_account = storage::ACCOUNTS
-            .lock()
-            .unwrap()
-            .modify_account(tranx.client, |acct| {
-                let a = if let Some(acc) = acct {
-                    acc.withdraw(tranx);
-                    Some(*acc)
-                } else {
-                    None
-                };
-                return a;
-            });
-
-        if let Some(acct) = u_account {
-            storage::ACCOUNTS.lock().unwrap().insert_account(acct);
-        }
-    }
-}
+use crate::acct::account::{self, Account};
+use crate::acct::storage;
+use crate::tx::{storage as TxStore, transaction::Transaction};
 
 /// Tests
 
@@ -160,7 +8,7 @@ pub fn process_withdrawal(tranx: &Transaction) {
 fn test_process_deposit() {
     // Clear the account data so it doesn't conflict with other tests
     unsafe {
-        storage::ACCOUNTS.lock().unwrap().clear_accounts();
+        storage::ACCOUNTS.lock().unwrap().clear();
     }
 
     let tranx_1 = Transaction {
@@ -177,13 +25,18 @@ fn test_process_deposit() {
         amount: 15.0,
     };
 
-    process_deposit(&tranx_1);
+    account::process_deposit(&tranx_1);
 
     unsafe {
         let acct = storage::ACCOUNTS
             .lock()
             .unwrap()
-            .read_account(tranx_1.client, |acc| acc.unwrap().clone());
+            .read(tranx_1.client, |acc| acc.unwrap().clone());
+
+        let tranx = TxStore::TRANSACTIONS
+            .lock()
+            .unwrap()
+            .read(tranx_1.tx, |tranx| tranx.unwrap().clone());
 
         assert!(
             acct.available == tranx_1.amount,
@@ -191,15 +44,36 @@ fn test_process_deposit() {
             tranx_1.amount,
             acct.available
         );
+
+        assert!(
+            tranx.r#type == tranx_1.r#type,
+            "invalid transaction type funds; expected {}, got {}",
+            tranx_1.r#type,
+            tranx.r#type
+        );
+
+        assert!(
+            tranx.amount == tranx_1.amount,
+            "invalid transaction amount funds; expected {}, got {}",
+            tranx_1.amount,
+            tranx.amount
+        );
+
+        assert!(
+            tranx.client == tranx_1.client,
+            "invalid transaction client funds; expected {}, got {}",
+            tranx_1.client,
+            tranx.client
+        );
     }
 
-    process_deposit(&tranx_2);
+    account::process_deposit(&tranx_2);
 
     unsafe {
         let acct = storage::ACCOUNTS
             .lock()
             .unwrap()
-            .read_account(tranx_2.client, |acc| acc.unwrap().clone());
+            .read(tranx_2.client, |acc| acc.unwrap().clone());
 
         assert!(
             acct.available == (tranx_1.amount + tranx_2.amount),
@@ -214,7 +88,7 @@ fn test_process_deposit() {
 fn test_process_withdrawal() {
     // Clear the account data so it doesn't conflict with other tests
     unsafe {
-        storage::ACCOUNTS.lock().unwrap().clear_accounts();
+        storage::ACCOUNTS.lock().unwrap().clear();
     }
     let tranx_1 = Transaction {
         r#type: "withdrawal".to_string(),
@@ -230,13 +104,13 @@ fn test_process_withdrawal() {
         amount: 15.0,
     };
 
-    process_withdrawal(&tranx_1);
+    account::process_withdrawal(&tranx_1);
 
     unsafe {
         let acct = storage::ACCOUNTS
             .lock()
             .unwrap()
-            .read_account(tranx_1.client, |acc| acc.unwrap().clone());
+            .read(tranx_1.client, |acc| acc.unwrap().clone());
 
         assert!(
             acct.available == 0.0,
@@ -244,22 +118,101 @@ fn test_process_withdrawal() {
             0.0,
             acct.available
         );
+
+        let tranx = TxStore::TRANSACTIONS
+            .lock()
+            .unwrap()
+            .read(tranx_1.tx, |tranx| tranx.unwrap().clone());
+
+        assert!(
+            tranx.r#type == tranx_1.r#type,
+            "invalid transaction type funds; expected {}, got {}",
+            tranx_1.r#type,
+            tranx.r#type
+        );
+
+        assert!(
+            tranx.amount == tranx_1.amount,
+            "invalid transaction amount funds; expected {}, got {}",
+            tranx_1.amount,
+            tranx.amount
+        );
+
+        assert!(
+            tranx.client == tranx_1.client,
+            "invalid transaction client funds; expected {}, got {}",
+            tranx_1.client,
+            tranx.client
+        );
     }
 
-    process_deposit(&tranx_2);
-    process_withdrawal(&tranx_1);
+    account::process_deposit(&tranx_2);
+    account::process_withdrawal(&tranx_1);
 
     unsafe {
         let acct = storage::ACCOUNTS
             .lock()
             .unwrap()
-            .read_account(tranx_2.client, |acc| acc.unwrap().clone());
+            .read(tranx_2.client, |acc| acc.unwrap().clone());
         let amount_diff = tranx_2.amount - tranx_1.amount;
         assert!(
             acct.available == amount_diff,
             "invalid available funds; expected {}, got {}",
             amount_diff,
             acct.available
+        );
+    }
+}
+
+#[test]
+fn test_process_dispute() {
+    // Clear the account data so it doesn't conflict with other tests
+    unsafe {
+        storage::ACCOUNTS.lock().unwrap().clear();
+        TxStore::TRANSACTIONS.lock().unwrap().clear();
+    }
+    let tranx_dispute = Transaction::new("dispute".to_string(), 1, 2, 0.0);
+
+    let tranx_deposit = Transaction::new("deposit".to_string(), 1, 1, 15.0);
+    let tranx_deposit_2 = Transaction::new("deposit".to_string(), 1, 2, 10.0);
+
+    account::process_dispute(&tranx_dispute);
+
+    unsafe {
+        storage::ACCOUNTS
+            .lock()
+            .unwrap()
+            .read(tranx_dispute.client, |acc| {
+                assert!(
+                    acc == None,
+                    "invalid available funds; expected {}, got {:?}",
+                    "None",
+                    acc
+                );
+            });
+    }
+
+    account::process_deposit(&tranx_deposit);
+    account::process_deposit(&tranx_deposit_2);
+    account::process_dispute(&tranx_dispute);
+
+    unsafe {
+        let acct = storage::ACCOUNTS
+            .lock()
+            .unwrap()
+            .read(tranx_dispute.client, |acc| acc.unwrap().clone());
+        assert!(
+            acct.available == tranx_deposit.amount,
+            "invalid available funds; expected {}, got {}",
+            tranx_deposit.amount,
+            acct.available
+        );
+
+        assert!(
+            acct.held == tranx_deposit_2.amount,
+            "invalid held funds; expected {}, got {}",
+            tranx_deposit_2.amount,
+            acct.held
         );
     }
 }
