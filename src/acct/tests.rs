@@ -6,11 +6,6 @@ use crate::tx::{storage as TxStore, transaction::Transaction};
 
 #[test]
 fn test_process_deposit() {
-    // Clear the account data so it doesn't conflict with other tests
-    unsafe {
-        storage::ACCOUNTS.lock().unwrap().clear();
-    }
-
     let tranx_1 = Transaction {
         r#type: "deposit".to_string(),
         client: 1,
@@ -86,21 +81,17 @@ fn test_process_deposit() {
 
 #[test]
 fn test_process_withdrawal() {
-    // Clear the account data so it doesn't conflict with other tests
-    unsafe {
-        storage::ACCOUNTS.lock().unwrap().clear();
-    }
     let tranx_1 = Transaction {
         r#type: "withdrawal".to_string(),
-        client: 1,
-        tx: 1,
+        client: 2,
+        tx: 2,
         amount: 10.0,
     };
 
     let tranx_2 = Transaction {
         r#type: "deposit".to_string(),
-        client: 1,
-        tx: 1,
+        client: 2,
+        tx: 2,
         amount: 15.0,
     };
 
@@ -166,15 +157,10 @@ fn test_process_withdrawal() {
 
 #[test]
 fn test_process_dispute() {
-    // Clear the account data so it doesn't conflict with other tests
-    unsafe {
-        storage::ACCOUNTS.lock().unwrap().clear();
-        TxStore::TRANSACTIONS.lock().unwrap().clear();
-    }
-    let tranx_dispute = Transaction::new("dispute".to_string(), 1, 2, 0.0);
+    let tranx_dispute = Transaction::new("dispute".to_string(), 3, 33, 0.0);
 
-    let tranx_deposit = Transaction::new("deposit".to_string(), 1, 1, 15.0);
-    let tranx_deposit_2 = Transaction::new("deposit".to_string(), 1, 2, 10.0);
+    let tranx_deposit = Transaction::new("deposit".to_string(), 3, 3, 15.0);
+    let tranx_deposit_2 = Transaction::new("deposit".to_string(), 3, 33, 10.0);
 
     account::process_dispute(&tranx_dispute);
 
@@ -405,6 +391,66 @@ fn test_dispute() {
         account.held == 15.0,
         "wrong held funds; expect {}, got {}",
         15.0,
+        account.held
+    );
+}
+
+#[test]
+fn test_resolve() {
+    let mut account = Account::new(1, 0.0, 20.0);
+    let mut tranx_deposit = Transaction::new("deposit".to_string(), 1, 1, 20.0);
+
+    // Test initial funds
+    assert!(
+        account.available == 0.0,
+        "wrong available funds; expect {}, got {}",
+        0.0,
+        account.available
+    );
+
+    assert!(
+        account.held == 20.0,
+        "wrong held funds; expect {}, got {}",
+        20.0,
+        account.held
+    );
+
+    // Test resolving excess funds
+
+    tranx_deposit.amount = 50.0;
+
+    account.resolve(&tranx_deposit);
+
+    assert!(
+        account.available == 0.0,
+        "wrong available funds; expect {}, got {}",
+        0.0,
+        account.available
+    );
+
+    assert!(
+        account.held == 20.0,
+        "wrong held funds; expect {}, got {}",
+        20.0,
+        account.held
+    );
+
+    // Test resolving funds
+
+    tranx_deposit.amount = 20.0;
+    account.resolve(&tranx_deposit);
+
+    assert!(
+        account.available == 20.0,
+        "wrong available funds; expect {}, got {}",
+        20.0,
+        account.available
+    );
+
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
         account.held
     );
 }

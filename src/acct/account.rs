@@ -35,16 +35,23 @@ impl Account {
     }
 
     pub fn withdraw(&mut self, tranx: &Transaction) {
-        if tranx.amount < self.available {
+        if tranx.amount <= self.available {
             self.available -= tranx.amount;
             self.total -= tranx.amount;
         }
     }
 
     pub fn dispute(&mut self, tranx: &Transaction) {
-        if tranx.amount < self.available {
+        if tranx.amount <= self.available {
             self.available -= tranx.amount;
             self.held += tranx.amount;
+        }
+    }
+
+    pub fn resolve(&mut self, tranx: &Transaction) {
+        if tranx.amount <= self.held {
+            self.available += tranx.amount;
+            self.held -= tranx.amount;
         }
     }
 }
