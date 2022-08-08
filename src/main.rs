@@ -3,11 +3,13 @@ extern crate csv;
 mod acct;
 mod tx;
 
+use std::collections::HashMap;
 use std::env;
 use std::error::Error;
 use std::ffi::OsString;
 use std::fs::File;
 use std::process;
+use std::sync::Mutex;
 
 use crate::acct::account::{self, Account};
 use crate::tx::transaction::{self, Transaction};
@@ -30,6 +32,7 @@ fn read_csv_file() -> Result<(), Box<dyn Error>> {
         account::process_deposit(&record);
         account::process_withdrawal(&record);
         account::process_dispute(&record);
+        account::process_resolve(&record);
     }
 
     account::print();

@@ -2,6 +2,7 @@ use std::io;
 extern crate csv;
 
 use crate::acct::storage;
+use crate::tx::transaction::Dispute;
 use crate::tx::{storage as TxStore, transaction::Transaction};
 use serde::Serialize;
 
@@ -34,16 +35,23 @@ impl Account {
     }
 
     pub fn withdraw(&mut self, tranx: &Transaction) {
-        if tranx.amount < self.available {
+        if tranx.amount <= self.available {
             self.available -= tranx.amount;
             self.total -= tranx.amount;
         }
     }
 
     pub fn dispute(&mut self, tranx: &Transaction) {
-        if tranx.amount < self.available {
+        if tranx.amount <= self.available {
             self.available -= tranx.amount;
             self.held += tranx.amount;
+        }
+    }
+
+    pub fn resolve(&mut self, tranx: &Transaction) {
+        if tranx.amount <= self.held {
+            self.available += tranx.amount;
+            self.held -= tranx.amount;
         }
     }
 }
@@ -168,6 +176,14 @@ pub fn process_dispute(tranx: &Transaction) {
             .lock()
             .unwrap()
             .read(tranx.tx, |trx| trx.unwrap().clone());
+
+        let dispute = Dispute::new(tranx.client, tranx.tx, false);
+
+        // Store dispute
+        TxStore::TRANSACTIONS
+            .lock()
+            .unwrap()
+            .insert_dispute(dispute);
     }
 
     let account_exists: bool;
@@ -201,6 +217,95 @@ pub fn process_dispute(tranx: &Transaction) {
 
         if let Some(acct) = u_account {
             storage::ACCOUNTS.lock().unwrap().insert(acct);
+        }
+    }
+}
+
+pub fn process_resolve(tranx: &Transaction) {
+    if tranx.r#type != "resolve" {
+        return;
+    }
+
+    let tx_exists: bool;
+    let dispute_exists: bool;
+
+    unsafe {
+        tx_exists = TxStore::TRANSACTIONS.lock().unwrap().exists(tranx.tx);
+        dispute_exists = TxStore::TRANSACTIONS
+            .lock()
+            .unwrap()
+            .dispute_exists(tranx.tx);
+    }
+
+    if !tx_exists || !dispute_exists {
+        return;
+    }
+
+    let stored_tranx: Transaction;
+    let stored_dispute: Dispute;
+
+    unsafe {
+        stored_tranx = TxStore::TRANSACTIONS
+            .lock()
+            .unwrap()
+            .read(tranx.tx, |trx| trx.unwrap().clone());
+
+        stored_dispute = TxStore::TRANSACTIONS
+            .lock()
+            .unwrap()
+            .dispute(tranx.tx, |trx| trx.unwrap().clone());
+    }
+
+    if stored_dispute.resolved {
+        return;
+    }
+
+    let account_exists: bool;
+
+    unsafe {
+        account_exists = storage::ACCOUNTS.lock().unwrap().exists(tranx.client);
+    }
+
+    if !account_exists {
+        let new_account = Account::new(tranx.client, 0.0, 0.0);
+        unsafe {
+            storage::ACCOUNTS.lock().unwrap().insert(new_account);
+        }
+    }
+
+    let u_account: Option<Account>;
+
+    unsafe {
+        let updated_dispute =
+            TxStore::TRANSACTIONS
+                .lock()
+                .unwrap()
+                .modify_dispute(stored_dispute.tx, |dis| {
+                    let disp = dis.unwrap();
+                    disp.resolved = true;
+
+                    return *disp;
+                });
+
+        u_account = storage::ACCOUNTS
+            .lock()
+            .unwrap()
+            .modify(tranx.client, |acct| {
+                let a = if let Some(acc) = acct {
+                    acc.resolve(&stored_tranx);
+                    Some(*acc)
+                } else {
+                    None
+                };
+                return a;
+            });
+
+        if let Some(acct) = u_account {
+            storage::ACCOUNTS.lock().unwrap().insert(acct);
+            TxStore::TRANSACTIONS
+                .lock()
+                .unwrap()
+                .insert_dispute(updated_dispute);
         }
     }
 }
