@@ -30,38 +30,55 @@ impl Account {
     }
 
     pub fn deposit(&mut self, tranx: &Transaction) {
-        self.available += tranx.amount;
-        self.total += tranx.amount;
+        let available = self.available + tranx.amount;
+        let total = self.total + tranx.amount;
+        self.available = round_up(available);
+        self.total = round_up(total);
     }
 
     pub fn withdraw(&mut self, tranx: &Transaction) {
         if tranx.amount <= self.available {
-            self.available -= tranx.amount;
-            self.total -= tranx.amount;
+            let available = self.available - tranx.amount;
+            let total = self.total - tranx.amount;
+            self.available = round_up(available);
+            self.total = round_up(total);
         }
     }
 
     pub fn dispute(&mut self, tranx: &Transaction) {
         if tranx.amount <= self.available {
-            self.available -= tranx.amount;
-            self.held += tranx.amount;
+            let available = self.available - tranx.amount;
+            let held = self.held + tranx.amount;
+
+            self.available = round_up(available);
+            self.held = round_up(held);
         }
     }
 
     pub fn resolve(&mut self, tranx: &Transaction) {
         if tranx.amount <= self.held {
-            self.available += tranx.amount;
-            self.held -= tranx.amount;
+            let available = self.available + tranx.amount;
+            let held = self.held - tranx.amount;
+
+            self.available = round_up(available);
+            self.held = round_up(held);
         }
     }
 
     pub fn chargeback(&mut self, tranx: &Transaction) {
         if tranx.amount <= self.held {
-            self.held -= tranx.amount;
-            self.total -= tranx.amount;
+            let held = self.held - tranx.amount;
+            let total = self.total - tranx.amount;
+
+            self.held = round_up(held);
+            self.total = round_up(total);
             self.locked = true;
         }
     }
+}
+
+fn round_up(value: f32) -> f32 {
+    (value * 10000.0).floor() / 10000.0
 }
 
 pub fn print() {
