@@ -372,6 +372,20 @@ fn test_account_deposit() {
         account.total
     );
 
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     account.deposit(&tranx);
 
     // Test deposited funds
@@ -387,6 +401,20 @@ fn test_account_deposit() {
         "wrong total funds; expect {}, got {}",
         35.0,
         account.total
+    );
+
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
     );
 }
 
@@ -415,6 +443,20 @@ fn test_account_withdraw() {
         account.total
     );
 
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     // Test withdrawing excess funds
 
     tranx.amount = 50.0;
@@ -435,6 +477,20 @@ fn test_account_withdraw() {
         account.total
     );
 
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     // Test withdrawn funds
 
     tranx.amount = 5.0;
@@ -452,6 +508,20 @@ fn test_account_withdraw() {
         "wrong total funds; expect {}, got {}",
         15.0,
         account.total
+    );
+
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
     );
 }
 
@@ -480,6 +550,20 @@ fn test_account_dispute() {
         account.held
     );
 
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     // Test disputing excess funds
 
     tranx.amount = 50.0;
@@ -500,6 +584,20 @@ fn test_account_dispute() {
         account.held
     );
 
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     // Test disputing funds
 
     tranx.amount = 15.0;
@@ -517,6 +615,20 @@ fn test_account_dispute() {
         "wrong held funds; expect {}, got {}",
         15.0,
         account.held
+    );
+
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
     );
 }
 
@@ -540,6 +652,20 @@ fn test_account_resolve() {
         account.held
     );
 
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     // Test resolving excess funds
 
     tranx_deposit.amount = 50.0;
@@ -560,6 +686,20 @@ fn test_account_resolve() {
         account.held
     );
 
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     // Test resolving funds
 
     tranx_deposit.amount = 20.0;
@@ -577,5 +717,121 @@ fn test_account_resolve() {
         "wrong held funds; expect {}, got {}",
         0.0,
         account.held
+    );
+
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+}
+
+#[test]
+fn test_account_chargeback() {
+    let mut account = Account::new(1, 0.0, 20.0);
+    let mut tranx_deposit = Transaction::new("deposit".to_string(), 1, 1, 20.0);
+
+    // Test initial funds
+    assert!(
+        account.available == 0.0,
+        "wrong available funds; expect {}, got {}",
+        0.0,
+        account.available
+    );
+
+    assert!(
+        account.held == 20.0,
+        "wrong held funds; expect {}, got {}",
+        20.0,
+        account.held
+    );
+
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
+    // Test resolving excess funds
+
+    tranx_deposit.amount = 50.0;
+
+    account.chargeback(&tranx_deposit);
+
+    assert!(
+        account.available == 0.0,
+        "wrong available funds; expect {}, got {}",
+        0.0,
+        account.available
+    );
+
+    assert!(
+        account.held == 20.0,
+        "wrong held funds; expect {}, got {}",
+        20.0,
+        account.held
+    );
+
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
+    // Test resolving funds
+
+    tranx_deposit.amount = 20.0;
+    account.chargeback(&tranx_deposit);
+
+    assert!(
+        account.available == 0.0,
+        "wrong available funds; expect {}, got {}",
+        0.0,
+        account.available
+    );
+
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    assert!(
+        account.total == 0.0,
+        "wrong total funds; expect {}, got {}",
+        0.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == true,
+        "wrong locked status; expect {}, got {}",
+        true,
+        account.locked
     );
 }

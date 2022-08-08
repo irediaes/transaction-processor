@@ -54,6 +54,14 @@ impl Account {
             self.held -= tranx.amount;
         }
     }
+
+    pub fn chargeback(&mut self, tranx: &Transaction) {
+        if tranx.amount <= self.held {
+            self.held -= tranx.amount;
+            self.total -= tranx.amount;
+            self.locked = true;
+        }
+    }
 }
 
 pub fn print() {
