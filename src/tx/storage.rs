@@ -81,11 +81,11 @@ impl TransactionStorage {
     }
 
     pub fn dispute_exists(&self, id: u32) -> bool {
-        self.transactions.lock().unwrap().contains_key(&id)
+        self.disputes.lock().unwrap().contains_key(&id)
     }
 
     pub fn clear_disputes(&self) {
-        self.transactions.lock().unwrap().clear();
+        self.disputes.lock().unwrap().clear();
     }
 }
 
