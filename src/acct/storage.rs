@@ -7,8 +7,7 @@ use once_cell::sync::Lazy;
 
 use crate::Account;
 
-pub static mut ACCOUNTS: Lazy<Mutex<AccountStorage>> =
-    Lazy::new(|| Mutex::new(AccountStorage::new()));
+pub static ACCOUNTS: Lazy<Mutex<AccountStorage>> = Lazy::new(|| Mutex::new(AccountStorage::new()));
 
 pub struct AccountStorage {
     accounts: Arc<Mutex<HashMap<u16, Account>>>,
@@ -58,10 +57,6 @@ impl AccountStorage {
 
     pub fn exists(&self, id: u16) -> bool {
         self.accounts.lock().unwrap().contains_key(&id)
-    }
-
-    pub fn clear(&self) {
-        self.accounts.lock().unwrap().clear();
     }
 }
 

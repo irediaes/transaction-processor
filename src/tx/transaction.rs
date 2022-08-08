@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use crate::tx::storage;
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Transaction {
     pub r#type: String,

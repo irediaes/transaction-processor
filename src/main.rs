@@ -3,7 +3,6 @@ extern crate csv;
 mod acct;
 mod tx;
 
-use std::collections::HashMap;
 use std::env;
 use std::error::Error;
 use std::ffi::OsString;

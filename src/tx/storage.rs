@@ -1,5 +1,5 @@
 use std::{
-    collections::{hash_map::Iter, HashMap},
+    collections::HashMap,
     sync::{Arc, Mutex},
 };
 
@@ -7,7 +7,7 @@ use once_cell::sync::Lazy;
 
 use crate::tx::transaction::{Dispute, Transaction};
 
-pub static mut TRANSACTIONS: Lazy<Mutex<TransactionStorage>> =
+pub static TRANSACTIONS: Lazy<Mutex<TransactionStorage>> =
     Lazy::new(|| Mutex::new(TransactionStorage::new()));
 
 pub struct TransactionStorage {
@@ -48,10 +48,6 @@ impl TransactionStorage {
         self.transactions.lock().unwrap().contains_key(&id)
     }
 
-    pub fn clear(&self) {
-        self.transactions.lock().unwrap().clear();
-    }
-
     pub fn dispute<F, R>(&self, id: u32, f: F) -> R
     where
         F: FnOnce(Option<&Dispute>) -> R,
@@ -83,19 +79,12 @@ impl TransactionStorage {
     pub fn dispute_exists(&self, id: u32) -> bool {
         self.disputes.lock().unwrap().contains_key(&id)
     }
-
-    pub fn clear_disputes(&self) {
-        self.disputes.lock().unwrap().clear();
-    }
 }
 
 /// Tests
 
 #[test]
 fn test_transaction_storage_insert() {
-    unsafe {
-        TRANSACTIONS.lock().unwrap().clear();
-    }
     let transaction = Transaction {
         r#type: "deposit".to_string(),
         client: 1,
