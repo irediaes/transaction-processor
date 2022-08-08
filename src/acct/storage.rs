@@ -40,7 +40,7 @@ impl AccountStorage {
             .accounts
             .lock()
             .unwrap()
-            .insert(account.client, account.clone());
+            .insert(account.client, account);
 
         if let Some(_acct) = acc {
             return true;
@@ -68,7 +68,7 @@ impl AccountStorage {
 /// Tests
 
 #[test]
-fn test_insert() {
+fn test_account_storage_insert() {
     let account = Account {
         client: 1,
         available: 20.0,
@@ -93,10 +93,7 @@ fn test_insert() {
 }
 
 #[test]
-fn test_modify() {
-    unsafe {
-        ACCOUNTS.lock().unwrap().clear();
-    }
+fn test_account_storage_modify() {
     let account = Account {
         client: 1,
         available: 20.0,
@@ -122,15 +119,15 @@ fn test_modify() {
         let a = acc.unwrap();
         a.available = 25.0;
 
-        db.insert(*a);
-
         return *a;
     });
 
+    db.insert(updated);
+
     assert!(
-        updated.available == account.available,
+        updated.available == 25.0,
         "account not equal after modification; expect {}, got {}",
-        account.available,
+        25.0,
         updated.available,
     );
 }

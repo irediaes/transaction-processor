@@ -32,6 +32,7 @@ fn read_csv_file() -> Result<(), Box<dyn Error>> {
         account::process_deposit(&record);
         account::process_withdrawal(&record);
         account::process_dispute(&record);
+        account::process_resolve(&record);
     }
 
     account::print();

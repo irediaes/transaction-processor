@@ -21,7 +21,7 @@ impl Transaction {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 pub struct Dispute {
     pub client: u16,
     pub tx: u32,

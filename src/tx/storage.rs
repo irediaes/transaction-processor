@@ -73,6 +73,13 @@ impl TransactionStorage {
         false
     }
 
+    pub fn modify_dispute<F, R>(&self, id: u32, f: F) -> R
+    where
+        F: FnOnce(Option<&mut Dispute>) -> R,
+    {
+        f(self.disputes.lock().unwrap().get_mut(&id))
+    }
+
     pub fn dispute_exists(&self, id: u32) -> bool {
         self.transactions.lock().unwrap().contains_key(&id)
     }
@@ -85,7 +92,7 @@ impl TransactionStorage {
 /// Tests
 
 #[test]
-fn test_insert() {
+fn test_transaction_storage_insert() {
     unsafe {
         TRANSACTIONS.lock().unwrap().clear();
     }
@@ -111,10 +118,7 @@ fn test_insert() {
 }
 
 #[test]
-fn test_insert_dispute() {
-    unsafe {
-        TRANSACTIONS.lock().unwrap().clear_disputes();
-    }
+fn test_transaction_storage_insert_dispute() {
     let dispute = Dispute::new(1, 1, false);
 
     let db = TransactionStorage::new();
@@ -127,8 +131,41 @@ fn test_insert_dispute() {
 
     assert!(
         dispx.tx == dispute.tx,
-        "created client id and fetched client id are not equal; expected {}, got {}",
+        "created tx id and fetched client id are not equal; expected {}, got {}",
         dispute.tx,
         dispx.tx
+    );
+}
+
+#[test]
+fn test_transaction_storage_modify_dispute() {
+    let dispute = Dispute::new(1, 1, false);
+
+    let db = TransactionStorage::new();
+    let exists = db.exists(1);
+    assert!(!exists, "transation should be empty");
+
+    db.insert_dispute(dispute.clone());
+
+    let disp: Dispute = db.dispute(1, |dis| dis.unwrap().clone());
+
+    assert!(
+        disp.tx == dispute.tx,
+        "created tx id and fetched client id are not equal"
+    );
+
+    let updated = db.modify_dispute(dispute.tx, |dis| {
+        let disp = dis.unwrap();
+        disp.resolved = true;
+
+        return *disp;
+    });
+    db.insert_dispute(updated);
+
+    assert!(
+        updated.resolved == true,
+        "dispute not equal after modification; expect {}, got {}",
+        true,
+        updated.resolved,
     );
 }
