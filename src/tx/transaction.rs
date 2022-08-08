@@ -1,4 +1,14 @@
 use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
+
+use once_cell::sync::Lazy;
+
+use crate::storage::{Storage, StoreKey};
+
+pub static TRANSACTIONS: Lazy<Mutex<Storage<u32, Transaction>>> =
+    Lazy::new(|| Mutex::new(Storage::new()));
+
+pub static DISPUTES: Lazy<Mutex<Storage<u32, Dispute>>> = Lazy::new(|| Mutex::new(Storage::new()));
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Transaction {
@@ -19,6 +29,14 @@ impl Transaction {
     }
 }
 
+impl StoreKey for Transaction {
+    type Key = u32;
+
+    fn key(&self) -> Self::Key {
+        self.tx
+    }
+}
+
 #[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 pub struct Dispute {
     pub client: u16,
@@ -33,5 +51,13 @@ impl Dispute {
             tx,
             resolved,
         }
+    }
+}
+
+impl StoreKey for Dispute {
+    type Key = u32;
+
+    fn key(&self) -> Self::Key {
+        self.tx
     }
 }

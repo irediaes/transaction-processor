@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::acct::account::{self, Account};
-    use crate::acct::storage::{self, AccountStorage};
-    use crate::tx::{storage as TxStore, transaction::Transaction};
+    use crate::ac::account::{self, Account};
+    use crate::tx::transaction::{self, Dispute, Transaction};
 
     #[test]
     fn test_process_deposit() {
@@ -22,12 +21,12 @@ mod tests {
 
         account::process_deposit(&tranx_1);
 
-        let acct = storage::ACCOUNTS
+        let acct = account::ACCOUNTS
             .lock()
             .unwrap()
             .read(tranx_1.client, |acc| acc.unwrap().clone());
 
-        let tranx = TxStore::TRANSACTIONS
+        let tranx = transaction::TRANSACTIONS
             .lock()
             .unwrap()
             .read(tranx_1.tx, |tranx| tranx.unwrap().clone());
@@ -83,12 +82,12 @@ mod tests {
 
         account::process_deposit(&tranx_2);
 
-        let acct = storage::ACCOUNTS
+        let acct = account::ACCOUNTS
             .lock()
             .unwrap()
             .read(tranx_2.client, |acc| acc.unwrap().clone());
 
-        let tranx = TxStore::TRANSACTIONS
+        let tranx = transaction::TRANSACTIONS
             .lock()
             .unwrap()
             .read(tranx_2.tx, |tranx| tranx.unwrap().clone());
@@ -171,7 +170,7 @@ mod tests {
 
         account::process_withdrawal(&tranx_withdrawal);
 
-        let acct = storage::ACCOUNTS
+        let acct = account::ACCOUNTS
             .lock()
             .unwrap()
             .read(client, |acc| acc.unwrap().clone());
@@ -204,7 +203,7 @@ mod tests {
             acct.locked
         );
 
-        let tranx = TxStore::TRANSACTIONS
+        let tranx = transaction::TRANSACTIONS
             .lock()
             .unwrap()
             .read(tranx_withdrawal.tx, |tranx| tranx.unwrap().clone());
@@ -233,7 +232,7 @@ mod tests {
         account::process_deposit(&tranx_deposit);
         account::process_withdrawal(&tranx_withdrawal_2);
 
-        let acct = storage::ACCOUNTS
+        let acct = account::ACCOUNTS
             .lock()
             .unwrap()
             .read(client, |acc| acc.unwrap().clone());
@@ -276,7 +275,7 @@ mod tests {
 
         account::process_dispute(&tranx_dispute);
 
-        storage::ACCOUNTS
+        account::ACCOUNTS
             .lock()
             .unwrap()
             .read(tranx_dispute.client, |acc| {
@@ -292,7 +291,7 @@ mod tests {
         account::process_deposit(&tranx_deposit_2);
         account::process_dispute(&tranx_dispute);
 
-        let acct = storage::ACCOUNTS
+        let acct = account::ACCOUNTS
             .lock()
             .unwrap()
             .read(tranx_dispute.client, |acc| acc.unwrap().clone());
@@ -325,10 +324,10 @@ mod tests {
             acct.locked
         );
 
-        let dispute = TxStore::TRANSACTIONS
+        let dispute = transaction::DISPUTES
             .lock()
             .unwrap()
-            .dispute(tranx_dispute.tx, |acc| acc.unwrap().clone());
+            .read(tranx_dispute.tx, |acc| acc.unwrap().clone());
 
         assert!(
             dispute.tx == tranx_dispute.tx,
@@ -355,7 +354,7 @@ mod tests {
 
         account::process_resolve(&tranx_resolve);
 
-        storage::ACCOUNTS
+        account::ACCOUNTS
             .lock()
             .unwrap()
             .read(tranx_dispute.client, |acc| {
@@ -371,7 +370,7 @@ mod tests {
         account::process_deposit(&tranx_deposit_2);
         account::process_dispute(&tranx_dispute);
 
-        let acct = storage::ACCOUNTS
+        let acct = account::ACCOUNTS
             .lock()
             .unwrap()
             .read(tranx_dispute.client, |acc| acc.unwrap().clone());
@@ -404,10 +403,10 @@ mod tests {
             acct.locked
         );
 
-        let dispute = TxStore::TRANSACTIONS
+        let dispute: Dispute = transaction::DISPUTES
             .lock()
             .unwrap()
-            .dispute(tranx_dispute.tx, |acc| acc.unwrap().clone());
+            .read(tranx_dispute.tx, |acc| acc.unwrap().clone());
 
         assert!(
             dispute.tx == tranx_dispute.tx,
@@ -432,7 +431,7 @@ mod tests {
         // test resolve
         account::process_resolve(&tranx_resolve);
 
-        let acct = storage::ACCOUNTS
+        let acct = account::ACCOUNTS
             .lock()
             .unwrap()
             .read(tranx_dispute.client, |acc| acc.unwrap().clone());
@@ -467,10 +466,10 @@ mod tests {
             acct.locked
         );
 
-        let dispute = TxStore::TRANSACTIONS
+        let dispute: Dispute = transaction::DISPUTES
             .lock()
             .unwrap()
-            .dispute(tranx_dispute.tx, |acc| acc.unwrap().clone());
+            .read(tranx_dispute.tx, |acc| acc.unwrap().clone());
 
         assert!(
             dispute.tx == tranx_dispute.tx,
@@ -505,7 +504,7 @@ mod tests {
         // test not existing dispute
         account::process_chargeback(&tranx_chargeback);
 
-        storage::ACCOUNTS
+        account::ACCOUNTS
             .lock()
             .unwrap()
             .read(tranx_dispute.client, |acc| {
@@ -521,7 +520,7 @@ mod tests {
         account::process_deposit(&tranx_deposit_2);
         account::process_dispute(&tranx_dispute);
 
-        let acct = storage::ACCOUNTS
+        let acct = account::ACCOUNTS
             .lock()
             .unwrap()
             .read(tranx_dispute.client, |acc| acc.unwrap().clone());
@@ -554,10 +553,10 @@ mod tests {
             acct.locked
         );
 
-        let dispute = TxStore::TRANSACTIONS
+        let dispute: Dispute = transaction::DISPUTES
             .lock()
             .unwrap()
-            .dispute(tranx_dispute.tx, |acc| acc.unwrap().clone());
+            .read(tranx_dispute.tx, |acc| acc.unwrap().clone());
 
         assert!(
             dispute.tx == tranx_dispute.tx,
@@ -582,7 +581,7 @@ mod tests {
         // test chargeback
         account::process_chargeback(&tranx_chargeback);
 
-        let acct = storage::ACCOUNTS
+        let acct = account::ACCOUNTS
             .lock()
             .unwrap()
             .read(tranx_dispute.client, |acc| acc.unwrap().clone());
@@ -615,10 +614,10 @@ mod tests {
             acct.locked
         );
 
-        let dispute = TxStore::TRANSACTIONS
+        let dispute: Dispute = transaction::DISPUTES
             .lock()
             .unwrap()
-            .dispute(tranx_dispute.tx, |acc| acc.unwrap().clone());
+            .read(tranx_dispute.tx, |acc| acc.unwrap().clone());
 
         assert!(
             dispute.tx == tranx_dispute.tx,
@@ -1128,71 +1127,6 @@ mod tests {
             "wrong locked status; expect {}, got {}",
             true,
             account.locked
-        );
-    }
-
-    #[test]
-    fn test_account_storage_insert() {
-        let account = Account {
-            client: 1,
-            available: 20.0,
-            held: 0.0,
-            total: 0.0,
-            locked: false,
-        };
-
-        let db = AccountStorage::new();
-        let acct_exist = db.exists(1);
-        assert!(!acct_exist, "account should be empty");
-
-        db.insert(account.clone());
-
-        let acct: Account = db.read(1, |acct| acct.unwrap().clone());
-        // println!("{:?}", acct);
-
-        assert!(
-            acct.client == account.client,
-            "created client id and fetched client id are not equal"
-        );
-    }
-
-    #[test]
-    fn test_account_storage_modify() {
-        let account = Account {
-            client: 1,
-            available: 20.0,
-            held: 0.0,
-            total: 0.0,
-            locked: false,
-        };
-
-        let db = AccountStorage::new();
-        let exists = db.exists(1);
-        assert!(!exists, "account should be empty");
-
-        db.insert(account.clone());
-
-        let acct: Account = db.read(1, |acct| acct.unwrap().clone());
-
-        assert!(
-            acct.available == account.available,
-            "created client id and fetched client id are not equal"
-        );
-
-        let updated = db.modify(acct.client, |acc| {
-            let a = acc.unwrap();
-            a.available = 25.0;
-
-            return *a;
-        });
-
-        db.insert(updated);
-
-        assert!(
-            updated.available == 25.0,
-            "account not equal after modification; expect {}, got {}",
-            25.0,
-            updated.available,
         );
     }
 }
