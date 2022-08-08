@@ -16,7 +16,7 @@ fn test_process_deposit() {
     let tranx_2 = Transaction {
         r#type: "deposit".to_string(),
         client: 1,
-        tx: 1,
+        tx: 11,
         amount: 15.0,
     };
 
@@ -41,6 +41,27 @@ fn test_process_deposit() {
         );
 
         assert!(
+            acct.held == 0.0,
+            "invalid held funds; expected {}, got {}",
+            0.0,
+            acct.total
+        );
+
+        assert!(
+            acct.total == tranx_1.amount,
+            "invalid total funds; expected {}, got {}",
+            tranx_1.amount,
+            acct.total
+        );
+
+        assert!(
+            acct.locked == false,
+            "wrong locked status; expect {}, got {}",
+            false,
+            acct.locked
+        );
+
+        assert!(
             tranx.r#type == tranx_1.r#type,
             "invalid transaction type funds; expected {}, got {}",
             tranx_1.r#type,
@@ -70,38 +91,95 @@ fn test_process_deposit() {
             .unwrap()
             .read(tranx_2.client, |acc| acc.unwrap().clone());
 
+        let tranx = TxStore::TRANSACTIONS
+            .lock()
+            .unwrap()
+            .read(tranx_2.tx, |tranx| tranx.unwrap().clone());
+
+        let available = tranx_1.amount + tranx_2.amount;
+
         assert!(
-            acct.available == (tranx_1.amount + tranx_2.amount),
+            acct.available == available,
             "invalid available funds; expected {}, got {}",
-            tranx_1.amount,
+            available,
             acct.available
+        );
+
+        assert!(
+            acct.held == 0.0,
+            "invalid held funds; expected {}, got {}",
+            0.0,
+            acct.total
+        );
+
+        assert!(
+            acct.total == available,
+            "invalid total funds; expected {}, got {}",
+            available,
+            acct.total
+        );
+
+        assert!(
+            acct.locked == false,
+            "wrong locked status; expect {}, got {}",
+            false,
+            acct.locked
+        );
+
+        assert!(
+            tranx.r#type == tranx_2.r#type,
+            "invalid transaction type funds; expected {}, got {}",
+            tranx_2.r#type,
+            tranx.r#type
+        );
+
+        assert!(
+            tranx.amount == tranx_2.amount,
+            "invalid transaction amount funds; expected {}, got {}",
+            tranx_2.amount,
+            tranx.amount
+        );
+
+        assert!(
+            tranx.client == tranx_2.client,
+            "invalid transaction client funds; expected {}, got {}",
+            tranx_2.client,
+            tranx.client
         );
     }
 }
 
 #[test]
 fn test_process_withdrawal() {
-    let tranx_1 = Transaction {
+    let client = 2;
+    let tranx_withdrawal = Transaction {
         r#type: "withdrawal".to_string(),
-        client: 2,
+        client,
         tx: 2,
         amount: 10.0,
     };
 
-    let tranx_2 = Transaction {
+    let tranx_withdrawal_2 = Transaction {
+        r#type: "withdrawal".to_string(),
+        client,
+        tx: 22,
+        amount: 10.0,
+    };
+
+    let tranx_deposit = Transaction {
         r#type: "deposit".to_string(),
-        client: 2,
-        tx: 2,
+        client,
+        tx: 222,
         amount: 15.0,
     };
 
-    account::process_withdrawal(&tranx_1);
+    account::process_withdrawal(&tranx_withdrawal);
 
     unsafe {
         let acct = storage::ACCOUNTS
             .lock()
             .unwrap()
-            .read(tranx_1.client, |acc| acc.unwrap().clone());
+            .read(client, |acc| acc.unwrap().clone());
 
         assert!(
             acct.available == 0.0,
@@ -110,47 +188,89 @@ fn test_process_withdrawal() {
             acct.available
         );
 
+        assert!(
+            acct.held == 0.0,
+            "invalid held funds; expected {}, got {}",
+            0.0,
+            acct.total
+        );
+
+        assert!(
+            acct.total == 0.0,
+            "invalid total funds; expected {}, got {}",
+            0.0,
+            acct.total
+        );
+
+        assert!(
+            acct.locked == false,
+            "wrong locked status; expect {}, got {}",
+            false,
+            acct.locked
+        );
+
         let tranx = TxStore::TRANSACTIONS
             .lock()
             .unwrap()
-            .read(tranx_1.tx, |tranx| tranx.unwrap().clone());
+            .read(tranx_withdrawal.tx, |tranx| tranx.unwrap().clone());
 
         assert!(
-            tranx.r#type == tranx_1.r#type,
+            tranx.r#type == tranx_withdrawal.r#type,
             "invalid transaction type funds; expected {}, got {}",
-            tranx_1.r#type,
+            tranx_withdrawal.r#type,
             tranx.r#type
         );
 
         assert!(
-            tranx.amount == tranx_1.amount,
+            tranx.amount == tranx_withdrawal.amount,
             "invalid transaction amount funds; expected {}, got {}",
-            tranx_1.amount,
+            tranx_withdrawal.amount,
             tranx.amount
         );
 
         assert!(
-            tranx.client == tranx_1.client,
+            tranx.client == tranx_withdrawal.client,
             "invalid transaction client funds; expected {}, got {}",
-            tranx_1.client,
+            tranx_withdrawal.client,
             tranx.client
         );
     }
 
-    account::process_deposit(&tranx_2);
-    account::process_withdrawal(&tranx_1);
+    account::process_deposit(&tranx_deposit);
+    account::process_withdrawal(&tranx_withdrawal_2);
 
     unsafe {
         let acct = storage::ACCOUNTS
             .lock()
             .unwrap()
-            .read(tranx_2.client, |acc| acc.unwrap().clone());
-        let amount_diff = tranx_2.amount - tranx_1.amount;
+            .read(client, |acc| acc.unwrap().clone());
+        let amount_diff = tranx_deposit.amount - tranx_withdrawal_2.amount;
         assert!(
             acct.available == amount_diff,
             "invalid available funds; expected {}, got {}",
             amount_diff,
             acct.available
+        );
+
+        assert!(
+            acct.held == 0.0,
+            "invalid held funds; expected {}, got {}",
+            0.0,
+            acct.total
+        );
+
+        assert!(
+            acct.total == amount_diff,
+            "invalid total funds; expected {}, got {}",
+            amount_diff,
+            acct.total
+        );
+
+        assert!(
+            acct.locked == false,
+            "wrong locked status; expect {}, got {}",
+            false,
+            acct.locked
         );
     }
 }
@@ -199,6 +319,21 @@ fn test_process_dispute() {
             "invalid held funds; expected {}, got {}",
             tranx_deposit_2.amount,
             acct.held
+        );
+
+        let total = tranx_deposit.amount + tranx_deposit_2.amount;
+        assert!(
+            acct.total == total,
+            "invalid total funds; expected {}, got {}",
+            total,
+            acct.total
+        );
+
+        assert!(
+            acct.locked == false,
+            "wrong locked status; expect {}, got {}",
+            false,
+            acct.locked
         );
 
         let dispute = TxStore::TRANSACTIONS
@@ -269,6 +404,21 @@ fn test_process_resolve() {
             acct.held
         );
 
+        let total = tranx_deposit.amount + tranx_deposit_2.amount;
+        assert!(
+            acct.total == total,
+            "invalid total funds; expected {}, got {}",
+            total,
+            acct.total
+        );
+
+        assert!(
+            acct.locked == false,
+            "wrong locked status; expect {}, got {}",
+            false,
+            acct.locked
+        );
+
         let dispute = TxStore::TRANSACTIONS
             .lock()
             .unwrap()
@@ -317,6 +467,175 @@ fn test_process_resolve() {
             "invalid held funds; expected {}, got {}",
             0.0,
             acct.held
+        );
+
+        let total = tranx_deposit.amount + tranx_deposit_2.amount;
+        assert!(
+            acct.total == total,
+            "invalid total funds; expected {}, got {}",
+            total,
+            acct.total
+        );
+
+        assert!(
+            acct.locked == false,
+            "wrong locked status; expect {}, got {}",
+            false,
+            acct.locked
+        );
+
+        let dispute = TxStore::TRANSACTIONS
+            .lock()
+            .unwrap()
+            .dispute(tranx_dispute.tx, |acc| acc.unwrap().clone());
+
+        assert!(
+            dispute.tx == tranx_dispute.tx,
+            "invalid dispute tx; expected {}, got {}",
+            tranx_dispute.tx,
+            dispute.tx
+        );
+
+        assert!(
+            dispute.client == tranx_dispute.client,
+            "invalid dispute client; expected {}, got {}",
+            tranx_dispute.client,
+            dispute.client
+        );
+
+        assert!(
+            dispute.resolved == true,
+            "invalid dispute client; expected {}, got {}",
+            true,
+            dispute.resolved
+        );
+    }
+}
+
+#[test]
+fn test_process_chargeback() {
+    let tranx_dispute = Transaction::new("dispute".to_string(), 5, 55, 0.0);
+    let tranx_chargeback = Transaction::new("chargeback".to_string(), 5, 55, 0.0);
+
+    let tranx_deposit = Transaction::new("deposit".to_string(), 5, 5, 15.0);
+    let tranx_deposit_2 = Transaction::new("deposit".to_string(), 5, 55, 10.0);
+
+    // test not existing dispute
+    account::process_chargeback(&tranx_chargeback);
+
+    unsafe {
+        storage::ACCOUNTS
+            .lock()
+            .unwrap()
+            .read(tranx_dispute.client, |acc| {
+                assert!(
+                    acc == None,
+                    "invalid available funds; expected {}, got {:?}",
+                    "None",
+                    acc
+                );
+            });
+    }
+
+    account::process_deposit(&tranx_deposit);
+    account::process_deposit(&tranx_deposit_2);
+    account::process_dispute(&tranx_dispute);
+
+    unsafe {
+        let acct = storage::ACCOUNTS
+            .lock()
+            .unwrap()
+            .read(tranx_dispute.client, |acc| acc.unwrap().clone());
+        assert!(
+            acct.available == tranx_deposit.amount,
+            "invalid available funds; expected {}, got {}",
+            tranx_deposit.amount,
+            acct.available
+        );
+
+        assert!(
+            acct.held == tranx_deposit_2.amount,
+            "invalid held funds; expected {}, got {}",
+            tranx_deposit_2.amount,
+            acct.held
+        );
+
+        let total = tranx_deposit.amount + tranx_deposit_2.amount;
+        assert!(
+            acct.total == total,
+            "invalid total funds; expected {}, got {}",
+            total,
+            acct.total
+        );
+
+        assert!(
+            acct.locked == false,
+            "wrong locked status; expect {}, got {}",
+            false,
+            acct.locked
+        );
+
+        let dispute = TxStore::TRANSACTIONS
+            .lock()
+            .unwrap()
+            .dispute(tranx_dispute.tx, |acc| acc.unwrap().clone());
+
+        assert!(
+            dispute.tx == tranx_dispute.tx,
+            "invalid dispute tx; expected {}, got {}",
+            tranx_dispute.tx,
+            dispute.tx
+        );
+
+        assert!(
+            dispute.client == tranx_dispute.client,
+            "invalid dispute client; expected {}, got {}",
+            tranx_dispute.client,
+            dispute.client
+        );
+
+        assert!(
+            dispute.resolved == false,
+            "invalid dispute client; expected {}, got {}",
+            false,
+            dispute.resolved
+        );
+    }
+    // test chargeback
+    account::process_chargeback(&tranx_chargeback);
+
+    unsafe {
+        let acct = storage::ACCOUNTS
+            .lock()
+            .unwrap()
+            .read(tranx_dispute.client, |acc| acc.unwrap().clone());
+
+        assert!(
+            acct.available == tranx_deposit.amount,
+            "invalid available funds; expected {}, got {}",
+            tranx_deposit.amount,
+            acct.available
+        );
+
+        assert!(
+            acct.held == 0.0,
+            "invalid held funds; expected {}, got {}",
+            0.0,
+            acct.held
+        );
+
+        assert!(
+            acct.total == tranx_deposit.amount,
+            "invalid total funds; expected {}, got {}",
+            tranx_deposit_2.amount,
+            acct.total
+        );
+
+        assert!(
+            acct.locked == true,
+            "wrong locked status; expect {}, got {}",
+            true,
+            acct.locked
         );
 
         let dispute = TxStore::TRANSACTIONS
@@ -372,6 +691,20 @@ fn test_account_deposit() {
         account.total
     );
 
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     account.deposit(&tranx);
 
     // Test deposited funds
@@ -387,6 +720,20 @@ fn test_account_deposit() {
         "wrong total funds; expect {}, got {}",
         35.0,
         account.total
+    );
+
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
     );
 }
 
@@ -415,6 +762,20 @@ fn test_account_withdraw() {
         account.total
     );
 
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     // Test withdrawing excess funds
 
     tranx.amount = 50.0;
@@ -435,6 +796,20 @@ fn test_account_withdraw() {
         account.total
     );
 
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     // Test withdrawn funds
 
     tranx.amount = 5.0;
@@ -452,6 +827,20 @@ fn test_account_withdraw() {
         "wrong total funds; expect {}, got {}",
         15.0,
         account.total
+    );
+
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
     );
 }
 
@@ -480,6 +869,20 @@ fn test_account_dispute() {
         account.held
     );
 
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     // Test disputing excess funds
 
     tranx.amount = 50.0;
@@ -500,6 +903,20 @@ fn test_account_dispute() {
         account.held
     );
 
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     // Test disputing funds
 
     tranx.amount = 15.0;
@@ -517,6 +934,20 @@ fn test_account_dispute() {
         "wrong held funds; expect {}, got {}",
         15.0,
         account.held
+    );
+
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
     );
 }
 
@@ -540,6 +971,20 @@ fn test_account_resolve() {
         account.held
     );
 
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     // Test resolving excess funds
 
     tranx_deposit.amount = 50.0;
@@ -560,6 +1005,20 @@ fn test_account_resolve() {
         account.held
     );
 
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
     // Test resolving funds
 
     tranx_deposit.amount = 20.0;
@@ -577,5 +1036,121 @@ fn test_account_resolve() {
         "wrong held funds; expect {}, got {}",
         0.0,
         account.held
+    );
+
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+}
+
+#[test]
+fn test_account_chargeback() {
+    let mut account = Account::new(1, 0.0, 20.0);
+    let mut tranx_deposit = Transaction::new("deposit".to_string(), 1, 1, 20.0);
+
+    // Test initial funds
+    assert!(
+        account.available == 0.0,
+        "wrong available funds; expect {}, got {}",
+        0.0,
+        account.available
+    );
+
+    assert!(
+        account.held == 20.0,
+        "wrong held funds; expect {}, got {}",
+        20.0,
+        account.held
+    );
+
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
+    // Test resolving excess funds
+
+    tranx_deposit.amount = 50.0;
+
+    account.chargeback(&tranx_deposit);
+
+    assert!(
+        account.available == 0.0,
+        "wrong available funds; expect {}, got {}",
+        0.0,
+        account.available
+    );
+
+    assert!(
+        account.held == 20.0,
+        "wrong held funds; expect {}, got {}",
+        20.0,
+        account.held
+    );
+
+    assert!(
+        account.total == 20.0,
+        "wrong total funds; expect {}, got {}",
+        20.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == false,
+        "wrong locked status; expect {}, got {}",
+        false,
+        account.locked
+    );
+
+    // Test resolving funds
+
+    tranx_deposit.amount = 20.0;
+    account.chargeback(&tranx_deposit);
+
+    assert!(
+        account.available == 0.0,
+        "wrong available funds; expect {}, got {}",
+        0.0,
+        account.available
+    );
+
+    assert!(
+        account.held == 0.0,
+        "wrong held funds; expect {}, got {}",
+        0.0,
+        account.held
+    );
+
+    assert!(
+        account.total == 0.0,
+        "wrong total funds; expect {}, got {}",
+        0.0,
+        account.total
+    );
+
+    assert!(
+        account.locked == true,
+        "wrong locked status; expect {}, got {}",
+        true,
+        account.locked
     );
 }
