@@ -9,10 +9,9 @@ use std::error::Error;
 use std::ffi::OsString;
 use std::fs::File;
 use std::process;
-use std::sync::Mutex;
 
 use crate::acct::account::{self, Account};
-use crate::tx::transaction::{self, Transaction};
+use crate::tx::transaction::Transaction;
 
 fn main() {
     if let Err(err) = read_csv_file() {
@@ -24,7 +23,9 @@ fn main() {
 fn read_csv_file() -> Result<(), Box<dyn Error>> {
     let file_path = read_arg()?;
     let file = File::open(file_path)?;
-    let mut rdr = csv::Reader::from_reader(file);
+    let mut rdr = csv::ReaderBuilder::new()
+        .trim(csv::Trim::All)
+        .from_reader(file);
 
     for result in rdr.deserialize() {
         let record: Transaction = result?;
