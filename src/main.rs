@@ -4,14 +4,13 @@ mod ac;
 pub mod storage;
 mod tx;
 
+use crate::ac::account;
+use crate::tx::transaction::Transaction;
 use std::env;
 use std::error::Error;
 use std::ffi::OsString;
 use std::fs::File;
 use std::process;
-
-use crate::ac::account::{self};
-use crate::tx::transaction::Transaction;
 
 fn main() {
     if let Err(err) = read_csv_file() {
@@ -37,7 +36,7 @@ fn read_csv_file() -> Result<(), Box<dyn Error>> {
         account::process_chargeback(&record);
     }
 
-    account::print();
+    account::export();
 
     Ok(())
 }
