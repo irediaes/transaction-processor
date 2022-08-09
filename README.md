@@ -3,7 +3,6 @@ A simple toy payments engine that reads a series of transactions from a CSV, upd
 
 Please note: Further transactions are ignored on frozen(locked) accounts.
 ### Requirements
-* [Download](https://redis.io/download/) and install `Redis`
 * Prepare csv transaction file. Check `sample-tx.csv` and `sample-tx-large.csv` for reference.
 
 ### Build
