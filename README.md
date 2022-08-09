@@ -52,7 +52,7 @@ test ac::tests::tests::test_process_withdrawal ... ok
 ```
 
 ### Updates:
-* Adde concurrency to the accounts export
+* Added concurrency to the accounts export
 
 ### Upcoming Improvement
 * stream values through memory as opposed to loading the entire data set upfront
