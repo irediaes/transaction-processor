@@ -1,6 +1,3 @@
-use std::io;
-extern crate csv;
-
 use crate::storage::{Storage, StoreKey};
 use crate::tx::transaction::Dispute;
 use crate::tx::transaction::{self, Transaction};
@@ -8,7 +5,10 @@ use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::sync::Mutex;
 
+use super::export;
+
 pub static ACCOUNTS: Lazy<Mutex<Storage<u16, Account>>> = Lazy::new(|| Mutex::new(Storage::new()));
+pub static CLIENTS: Lazy<Mutex<Vec<u16>>> = Lazy::new(|| Mutex::new(vec![]));
 
 #[derive(Debug, Copy, Clone, PartialEq, Serialize)]
 pub struct Account {
@@ -92,14 +92,8 @@ fn round_up(value: f32) -> f32 {
     (value * 10000.0).floor() / 10000.0
 }
 
-pub fn print() {
-    let mut csv_writer = csv::Writer::from_writer(io::stdout());
-    ACCOUNTS.lock().unwrap().reads(|iter| {
-        for (_, acc) in iter {
-            csv_writer.serialize(acc).unwrap();
-            // println!("{:?}", acc)
-        }
-    })
+pub fn export() {
+    export::run();
 }
 
 pub fn process_deposit(tranx: &Transaction) {
@@ -327,6 +321,7 @@ fn get_account(client: u16) -> Account {
     if !account_exists {
         let new_account = Account::new(client, 0.0, 0.0);
         ACCOUNTS.lock().unwrap().insert(new_account);
+        CLIENTS.lock().unwrap().push(new_account.client);
     }
 
     ACCOUNTS
