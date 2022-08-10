@@ -22,7 +22,7 @@ async fn main() {
     }
 }
 
-async fn read_csv_file() -> Result<(), Box<dyn Error>> {
+async fn parse_csv_file() -> Result<(), Box<dyn Error>> {
     let file_path = read_arg()?;
     let file = File::open(file_path)?;
 
@@ -32,7 +32,7 @@ async fn read_csv_file() -> Result<(), Box<dyn Error>> {
             .from_reader(file);
 
         for result in rdr.deserialize() {
-            let record: Transaction = result.unwrap();
+            let record: Transaction = result.expect("invalid record in csv file. please check your input");
             yield record;
         }
     };
