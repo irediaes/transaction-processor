@@ -16,7 +16,7 @@ use std::process;
 
 #[tokio::main]
 async fn main() {
-    if let Err(err) = read_csv_file().await {
+    if let Err(err) = parse_csv_file().await {
         println!("{}", err);
         process::exit(1);
     }
