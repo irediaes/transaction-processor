@@ -3,6 +3,8 @@ extern crate csv;
 mod ac;
 pub mod storage;
 mod tx;
+use async_stream::stream;
+use futures_util::{pin_mut, StreamExt};
 
 use crate::ac::account;
 use crate::tx::transaction::Transaction;
@@ -12,22 +14,32 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::process;
 
-fn main() {
-    if let Err(err) = read_csv_file() {
+#[tokio::main]
+async fn main() {
+    if let Err(err) = parse_csv_file().await {
         println!("{}", err);
         process::exit(1);
     }
 }
 
-fn read_csv_file() -> Result<(), Box<dyn Error>> {
+async fn parse_csv_file() -> Result<(), Box<dyn Error>> {
     let file_path = read_arg()?;
     let file = File::open(file_path)?;
-    let mut rdr = csv::ReaderBuilder::new()
-        .trim(csv::Trim::All)
-        .from_reader(file);
 
-    for result in rdr.deserialize() {
-        let record: Transaction = result?;
+    let tx_stream = stream! {
+        let mut rdr = csv::ReaderBuilder::new()
+            .trim(csv::Trim::All)
+            .from_reader(file);
+
+        for result in rdr.deserialize() {
+            let record: Transaction = result.expect("invalid record in csv file. please check your input");
+            yield record;
+        }
+    };
+
+    pin_mut!(tx_stream);
+
+    while let Some(record) = tx_stream.next().await {
         // println!("{:?}", record);
         account::process_deposit(&record);
         account::process_withdrawal(&record);
